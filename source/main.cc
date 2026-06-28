@@ -4,6 +4,7 @@
 #include <vector>
 
 #include <raylib.h>
+#include <raymath.h>
 
 #include "beatmap_parser.hh"
 #include "shapes.hh"
@@ -24,6 +25,10 @@ void draw_crosshair(void);
 /* initialise default values for globals */
 void init(void);
 
+/* normalise OSU(x, y)->WorldScreen(x, y, z).
+   takes (x, y), Cuboid screen to project to */
+Vector3 normalise_osu_world(float px, float py, ShapeCuboid scr);
+
 /* update camera on keypress W/A/S/D
   
    TODO rebinded wasd
@@ -38,7 +43,8 @@ void update_options(void);
 
 vector<Target> all_targets;
 vector<Line>   fired_shots;
-bool                show_rays;
+bool           show_rays;
+ShapeCuboid    screen;
 float fov = 60;
 int scr_width  = 640;
 int scr_height = 480;
@@ -50,6 +56,8 @@ Vector2 scr_center = {
 Camera3D camera;
 Ray      gun_ray;
 Font     dbgfont;
+Mesh     sphere_mesh;
+Material sphere_material;
 
 void draw_ui(void)
 {
@@ -62,25 +70,19 @@ void draw_3d(void)
 {
 	BeginMode3D(camera);
 
-	/* walls */
-	DrawPlane((Vector3){ 0.0f, 0.0f, 0.0f }, (Vector2){ 32.0f, 32.0f }, LIGHTGRAY);
-	DrawCube((Vector3){ -16.0f, 2.5f, 0.0f }, 1.0f, 5.0f, 32.0f, BLUE);
-	DrawCube((Vector3){ 16.0f, 2.5f, 0.0f }, 1.0f, 5.0f, 32.0f, LIME);
-	DrawCube((Vector3){ 0.0f, 2.5f, 16.0f }, 32.0f, 5.0f, 1.0f, GOLD);
-
 	/* targets */
 	for (auto& i : all_targets) {
 		if (!i.visible)
 			continue;
 
+		Matrix tfm = MatrixTranslate(i.pos.x, i.pos.y, i.pos.z);
+
 		if (i.type == ShapeTypeSphere) {
 			if (i.hit)
-				i.col = BLUE;
-			DrawSphere(
-				i.pos,
-				i.shape.sphere.radius,
-				i.col
-			);
+				sphere_material.maps[MATERIAL_MAP_DIFFUSE].color = BLUE;
+			else
+				sphere_material.maps[MATERIAL_MAP_DIFFUSE].color = RED;
+			DrawMesh(sphere_mesh, sphere_material, tfm);
 		}
 		else if (i.type == ShapeTypeCapsule) {
 			/* TODO */
@@ -101,6 +103,9 @@ void draw_3d(void)
 		for (auto& i : fired_shots)
 			DrawLine3D(i.start, i.end, BLUE);
 	}
+
+	/* playing screen */
+	DrawCube({screen.x, screen.y, screen.z}, screen.width, screen.height, screen.length, BLACK);
 
 	EndMode3D();
 }
@@ -132,24 +137,50 @@ void init(void)
 		.projection = CAMERA_PERSPECTIVE,
 	};
 
-	/* test target */
-	for (float i = 1.0f; i < 4.0f; i += 0.5f) {
-		float rx = (float)GetRandomValue(-5, 5);
-		float ry = (float)GetRandomValue(1, 4);
-		float rz = (float)GetRandomValue(-2, 2);
+	/* load beatmap */
+	OsuBeatmap bmp;
+	/* TODO change load beatmap to return OsuBeatmap */
+	load_osu_beatmap(&bmp, "test.osu");
+
+	screen = {
+		.x = 0.0f, .y = 2.0f, .z = 0.0f,
+		.width = 8.0f, .height = 6.0f, .length = 0.01f
+	};
+
+	/* create sphere mesh */
+	sphere_mesh = GenMeshSphere(0.25f, 16, 16);
+	sphere_material = LoadMaterialDefault();
+	sphere_material.maps[MATERIAL_MAP_DIFFUSE].color = RED;
+
+	/* insert all targets from beatmap */
+	for (auto& i : bmp.objects) {
+		Vector3 pos = normalise_osu_world(i.x, i.y, screen);
 		all_targets.push_back(
 			(Target) {
-				.shape = { .sphere {.radius = 0.25f}, },
+				.shape = { .sphere {.radius = 0.25f} },
 				.type = ShapeTypeSphere,
-				.pos = {rx, ry, rz},
-				.col = RED,
-				.visible = true,
-				.hit = false,
+				.pos = pos, .col = RED,
+				.visible = true, .hit = false,
 			}
 		);
 	}
 
 	show_rays = false;
+}
+
+Vector3 normalise_osu_world(float px, float py, ShapeCuboid scr)
+{
+	/* normalised (x, y):
+	   (512 and 384 are the coordinate bounds used by osu)
+	   [https://osu.ppy.sh/community/forums/topics/201854?n=1] */
+	float nx = px / 512.0f;
+	float ny = py / 384.0f;
+
+	return (Vector3) {
+		.x = scr.x - (scr.width * 0.5f) + (nx * scr.width),
+		.y = scr.y + (scr.height * 0.5f) - (ny * scr.height),
+		.z = scr.z,
+	};
 }
 
 void update_camera_wasd(void)

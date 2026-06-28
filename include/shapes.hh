@@ -15,8 +15,23 @@ typedef struct {
 } ShapeSphere;
 
 typedef struct { /* TODO */ } ShapeCapsule;
-typedef struct { /* TODO */ } ShapeCuboid;
-typedef struct { /* TODO */ } ShapeCube;
+
+typedef struct {
+	float x;
+	float y;
+	float z;
+	float width;
+	float height;
+	float length;
+} ShapeCuboid;
+
+typedef struct {
+	float x;
+	float y;
+	float z;
+	float width;
+	float height;
+} ShapeCube;
 
 typedef struct {
 	union {
@@ -30,6 +45,7 @@ typedef struct {
 	Vector3   pos;
 	Color     col;
 
+	float     time_ms;
 	bool      visible;
 	bool      hit;
 } Target;
