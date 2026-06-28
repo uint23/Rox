@@ -1,30 +1,39 @@
-#include <stdlib.h>
+#include <cstdlib>
+#include <iostream>
+#include <vector>
 
 #include <raylib.h>
 
 #define GAME_NAME "Rox - Aim Trainer"
 
+using std::cout, std::endl;
+
 typedef enum {
 	ShapeTypeSphere,
 	ShapeTypeCapsule,
-	ShapeTypeCubeoid,
+	ShapeTypeCuboid,
 	ShapeTypeCube,
 } ShapeType;
 
-typedef struct { /* TODO */ } ShapeSphere;
+typedef struct {
+	float radius;
+} ShapeSphere;
+
 typedef struct { /* TODO */ } ShapeCapsule;
 typedef struct { /* TODO */ } ShapeCuboid;
 typedef struct { /* TODO */ } ShapeCube;
 
 typedef struct {
-	union shape {
+	union {
 		ShapeSphere  sphere;
 		ShapeCapsule capsule;
 		ShapeCuboid  cuboid;
 		ShapeCube    cube;
-	};
+	} shape;
 
-	Vector3 pos;
+	ShapeType type;
+	Vector3   pos;
+	Color     col;
 } Target;
 
 /* draw on screen ui */
@@ -45,6 +54,7 @@ void init(void);
    TODO normalise vectors */
 void update_camera_wasd(void);
 
+std::vector<Target> all_targets;
 int scr_width  = 640;
 int scr_height = 480;
 Vector2 scr_center = {
@@ -64,10 +74,34 @@ void draw_3d(void)
 {
 	BeginMode3D(camera);
 
+	/* walls */
 	DrawPlane((Vector3){ 0.0f, 0.0f, 0.0f }, (Vector2){ 32.0f, 32.0f }, LIGHTGRAY);
 	DrawCube((Vector3){ -16.0f, 2.5f, 0.0f }, 1.0f, 5.0f, 32.0f, BLUE);
 	DrawCube((Vector3){ 16.0f, 2.5f, 0.0f }, 1.0f, 5.0f, 32.0f, LIME);
 	DrawCube((Vector3){ 0.0f, 2.5f, 16.0f }, 32.0f, 5.0f, 1.0f, GOLD);
+
+	/* all targets */
+	for (auto& i : all_targets) {
+		if (i.type == ShapeTypeSphere) {
+			DrawSphere(
+				i.pos,
+				i.shape.sphere.radius,
+				i.col
+			);
+		}
+		else if (i.type == ShapeTypeCapsule) {
+			/* TODO */
+		}
+		else if (i.type == ShapeTypeCuboid) {
+			/* TODO */
+		}
+		else if (i.type == ShapeTypeCube) {
+			/* TODO */
+		}
+		else {
+			cout << "Invalid Shape" << endl;
+		}
+	}
 
 	EndMode3D();
 }
@@ -91,6 +125,18 @@ void init(void)
 		.fovy = 60.0f,
 		.projection = CAMERA_PERSPECTIVE,
 	};
+
+	/* test target */
+	for (float i = 1.0f; i < 4.0f; i+=0.5f) {
+		all_targets.push_back(
+			(Target) {
+				.shape = { .sphere {.radius = 0.25f}, },
+				.type = ShapeTypeSphere,
+				.pos = {i, 1.0f, 1.0f},
+				.col = RED,
+			}
+		);
+	}
 }
 
 void update_camera_wasd(void)
