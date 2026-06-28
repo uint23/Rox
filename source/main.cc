@@ -2,11 +2,58 @@
 
 #include <raylib.h>
 
+#define GAME_NAME "Rox - Aim Trainer"
+
+typedef enum {
+	ShapeTypeSphere,
+	ShapeTypeCapsule,
+	ShapeTypeCubeoid,
+	ShapeTypeCube,
+} ShapeType;
+
+typedef struct { /* TODO */ } ShapeSphere;
+typedef struct { /* TODO */ } ShapeCapsule;
+typedef struct { /* TODO */ } ShapeCuboid;
+typedef struct { /* TODO */ } ShapeCube;
+
+typedef struct {
+	union shape {
+		ShapeSphere  sphere;
+		ShapeCapsule capsule;
+		ShapeCuboid  cuboid;
+		ShapeCube    cube;
+	};
+
+	Vector3 pos;
+} Target;
+
+/* draw on screen ui */
 void draw_ui(void);
+
+/* draw 3d world */
 void draw_3d(void);
+
+/* TODO change to a texture/bitmap of sorts */
 void draw_crosshair(void);
 
+/* initialise default values for globals */
+void init(void);
+
+/* update camera on keypress W/A/S/D
+  
+   TODO rebinded wasd
+   TODO normalise vectors */
+void update_camera_wasd(void);
+
+int scr_width  = 640;
+int scr_height = 480;
+Vector2 scr_center = {
+	.x = (float)scr_width/2,
+	.y = (float)scr_height/2,
+};
+
 Camera3D camera;
+Ray gun_ray;
 
 void draw_ui(void)
 {
@@ -28,14 +75,12 @@ void draw_3d(void)
 void draw_crosshair(void)
 {
 	int radius = 4;
-	int cx = GetScreenWidth() / 2;
-	int cy = GetScreenHeight() / 2;
-	DrawCircle(cx-radius, cy-radius, 4, WHITE);
+	DrawCircle(scr_center.x-radius, scr_center.y-radius, 4, WHITE);
 }
 
-int main(void)
+void init(void)
 {
-	InitWindow(640, 480, "Rox - Aim Trainer");
+	InitWindow(scr_width, scr_height, GAME_NAME);
 	SetTargetFPS(144);
 	DisableCursor();
 
@@ -46,22 +91,32 @@ int main(void)
 		.fovy = 60.0f,
 		.projection = CAMERA_PERSPECTIVE,
 	};
+}
 
+void update_camera_wasd(void)
+{
+	UpdateCameraPro(
+		&camera,
+		(Vector3) {
+			(IsKeyDown(KEY_W) || IsKeyDown(KEY_UP))*0.1f -
+			(IsKeyDown(KEY_S) || IsKeyDown(KEY_DOWN))*0.1f,
+			(IsKeyDown(KEY_D) || IsKeyDown(KEY_RIGHT))*0.1f -
+			(IsKeyDown(KEY_A) || IsKeyDown(KEY_LEFT))*0.1f,
+			0.0f
+		},
+		(Vector3){GetMouseDelta().x*0.05f, GetMouseDelta().y*0.05f, 0.0f},
+		GetMouseWheelMove()*2.0f
+	);
+}
 
+int main(void)
+{
+	init();
 	while (!WindowShouldClose()) {
-		UpdateCameraPro(
-			&camera,
-			(Vector3) {
-				(IsKeyDown(KEY_W) || IsKeyDown(KEY_UP))*0.1f -
-				(IsKeyDown(KEY_S) || IsKeyDown(KEY_DOWN))*0.1f,
-				(IsKeyDown(KEY_D) || IsKeyDown(KEY_RIGHT))*0.1f -
-				(IsKeyDown(KEY_A) || IsKeyDown(KEY_LEFT))*0.1f,
-				0.0f
-			},
-			(Vector3){GetMouseDelta().x*0.05f, GetMouseDelta().y*0.05f, 0.0f},
-			GetMouseWheelMove()*2.0f
-		);
+		/* updates */
+		update_camera_wasd();
 
+		/* drawing */
 		BeginDrawing();
 		ClearBackground(WHITE);
 
