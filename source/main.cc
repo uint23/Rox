@@ -170,6 +170,9 @@ void update_targets(void)
 			};
 		}
 
+		ray.position.x+=0.0001f;
+		ray.position.y+=0.0001f;
+		ray.position.z+=0.0001f;
 		fired_shots.push_back({.start=ray.position, .end=end});
 	}
 }
