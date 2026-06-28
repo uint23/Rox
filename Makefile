@@ -1,5 +1,5 @@
 CC = c++
-CFLAGS = -std=c++20 -Wall -Wextra
+CFLAGS = -std=c++20 -Wall -Wextra -Wno-missing-field-initializers
 CPPFLAGS = -Iinclude
 LDFLAGS = -L. 
 
