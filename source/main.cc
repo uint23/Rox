@@ -13,6 +13,27 @@
 
 using std::cout, std::endl, std::vector;
 
+typedef enum {
+	STATE_MENU,
+	STATE_PLAYING,
+	STATE_RESULTS,
+} GameState;
+
+typedef struct { /* beatmap */
+	std::string  path;
+	std::string  name;
+	std::string  stars;
+	OsuHitObject ho;
+	/* ... */
+} BMP;
+
+struct {
+	bool framerate = true;
+	bool frametime = true;
+	bool hitboxes  = false;
+	bool showrays  = false;
+} dbgopts;
+
 /* draw on screen ui */
 void draw_ui(void);
 
@@ -21,6 +42,15 @@ void draw_3d(void);
 
 /* TODO change to a texture/bitmap of sorts */
 void draw_crosshair(void);
+
+/* draws items for menu state */
+void draw_state_menu(void);
+
+/* draws items for playing state */
+void draw_state_playing(void);
+
+/* draws items for results state */
+void draw_state_results(void);
 
 /* initialise default values for globals */
 void init(void);
@@ -41,9 +71,10 @@ void update_targets(void);
 /* change key configured options */
 void update_options(void);
 
+GameState      gamestate;
+vector<BMP>    all_beatmaps;
 vector<Target> all_targets;
 vector<Line>   fired_shots;
-bool           show_rays;
 ShapeCuboid    screen;
 float fov = 60;
 int scr_width  = 640;
@@ -55,15 +86,22 @@ Vector2 scr_center = {
 
 Camera3D camera;
 Ray      gun_ray;
-Font     dbgfont;
 Mesh     sphere_mesh;
 Material sphere_material;
 
 void draw_ui(void)
 {
 	draw_crosshair();
-	std::string fps_text = "FPS: " + std::to_string(GetFPS());
-	DrawTextEx(dbgfont, fps_text.c_str(), {10.0f, 10.0f}, 20.0f, 1.0f, RED);
+	if (dbgopts.framerate) {
+		std::string fps = "FPS: " + std::to_string(GetFPS());
+		DrawText(fps.c_str(), 10, 10, 20, RED);
+	}
+	if (dbgopts.frametime) {
+		float ft = GetFrameTime()*1000.0f;
+		std::string frametime = "FrameTime: " + std::to_string(ft).substr(0, 4) +
+		                        "ms";
+		DrawText(frametime.c_str(), 10, 10+20, 20, RED);
+	}
 }
 
 void draw_3d(void)
@@ -83,6 +121,11 @@ void draw_3d(void)
 			else
 				sphere_material.maps[MATERIAL_MAP_DIFFUSE].color = RED;
 			DrawMesh(sphere_mesh, sphere_material, tfm);
+
+			if (dbgopts.hitboxes) {
+				float boxsize = i.shape.sphere.radius * 2.0f;
+				DrawCubeWires(i.pos, boxsize, boxsize, boxsize, YELLOW);
+			}
 		}
 		else if (i.type == ShapeTypeCapsule) {
 			/* TODO */
@@ -99,7 +142,7 @@ void draw_3d(void)
 	}
 
 	/* shot trails */
-	if (show_rays) {
+	if (dbgopts.showrays) {
 		for (auto& i : fired_shots)
 			DrawLine3D(i.start, i.end, BLUE);
 	}
@@ -120,14 +163,47 @@ void draw_crosshair(void)
     DrawLine(cx-len, cy, cx+len, cy, BLACK); /* horizontal */
 }
 
+void draw_state_menu(void)
+{
+	if (IsKeyPressed(KEY_ENTER)) {
+		gamestate = STATE_PLAYING;
+		DisableCursor(); 
+	}
+
+	BeginDrawing();
+	ClearBackground(RAYWHITE);
+
+	DrawText("Rox - Aim Trainer", 40, 100, 20, BLUE);
+	DrawText("Press ENTER ", 40, 160, 20, BLUE);
+
+	EndDrawing();
+}
+
+void draw_state_playing(void)
+{
+	/* updates */
+	update_camera_wasd();
+	update_targets();
+	update_options();
+
+	/* drawing */
+	BeginDrawing();
+	ClearBackground(WHITE);
+
+	draw_3d();
+	draw_ui();
+
+	EndDrawing();
+}
+
+void draw_state_results(void)
+{
+}
+
 void init(void)
 {
 	InitWindow(scr_width, scr_height, GAME_NAME);
-	// SetTargetFPS(144);
-	DisableCursor();
-
-	dbgfont = LoadFont("assets/fonts/SplineSansMono-Regular.ttf");
-	dbgfont = LoadFontEx("assets/fonts/SplineSansMono-Regular.ttf", 20, NULL, 0);
+	SetTargetFPS(144);
 
 	camera = {
 		.position = (Vector3){ 0.0f, 2.0f, 4.0f },
@@ -160,12 +236,13 @@ void init(void)
 				.shape = { .sphere {.radius = 0.25f} },
 				.type = ShapeTypeSphere,
 				.pos = pos, .col = RED,
+				.time_ms = i.time_ms,
 				.visible = true, .hit = false,
 			}
 		);
 	}
 
-	show_rays = false;
+	gamestate = STATE_MENU;
 }
 
 Vector3 normalise_osu_world(float px, float py, ShapeCuboid scr)
@@ -239,8 +316,17 @@ void update_targets(void)
 
 void update_options(void)
 {
-	if (IsKeyPressed(KEY_R))
-		show_rays = !show_rays;
+	/* debug options */
+	if (IsKeyDown(KEY_RIGHT_SHIFT)) {
+		if (IsKeyPressed(KEY_R))
+			dbgopts.showrays = !dbgopts.showrays;
+		if (IsKeyPressed(KEY_H))
+			dbgopts.hitboxes = !dbgopts.hitboxes;
+		if (IsKeyPressed(KEY_F))
+			dbgopts.framerate = !dbgopts.framerate;
+		else if (IsKeyDown(KEY_LEFT_SHIFT) && IsKeyPressed(KEY_F))
+			dbgopts.frametime = !dbgopts.frametime;
+	}
 }
 
 int main(int argc, char* argv[])
@@ -273,21 +359,20 @@ int main(int argc, char* argv[])
 
 	init();
 	while (!WindowShouldClose()) {
-		/* updates */
-		update_camera_wasd();
-		update_targets();
-		update_options();
-
-		/* drawing */
-		BeginDrawing();
-		ClearBackground(WHITE);
-
-		draw_3d();
-		draw_ui();
-
-		EndDrawing();
+		switch (gamestate) {
+		case STATE_MENU:
+			draw_state_menu();
+			break;
+		case STATE_PLAYING:
+			draw_state_playing();
+			break;
+		case STATE_RESULTS:
+			draw_state_results();
+			break;
+		}
 	}
-	UnloadFont(dbgfont);
+	UnloadMesh(sphere_mesh);
+	UnloadMaterial(sphere_material);
 	CloseWindow();
 	return EXIT_SUCCESS;
 }
