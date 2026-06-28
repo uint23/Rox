@@ -4,7 +4,7 @@
 
 #include <raylib.h>
 
-#include "shapes.h"
+#include "shapes.hh"
 
 #define GAME_NAME "Rox - Aim Trainer"
 
@@ -28,7 +28,11 @@ void init(void);
    TODO normalise vectors */
 void update_camera_wasd(void);
 
+/* update targets on screen */
+void update_targets(void);
+
 std::vector<Target> all_targets;
+std::vector<Line>   fired_shots;
 int scr_width  = 640;
 int scr_height = 480;
 Vector2 scr_center = {
@@ -54,9 +58,11 @@ void draw_3d(void)
 	DrawCube((Vector3){ 16.0f, 2.5f, 0.0f }, 1.0f, 5.0f, 32.0f, LIME);
 	DrawCube((Vector3){ 0.0f, 2.5f, 16.0f }, 32.0f, 5.0f, 1.0f, GOLD);
 
-	/* all targets */
+	/* targets */
 	for (auto& i : all_targets) {
 		if (i.type == ShapeTypeSphere) {
+			if (i.hit)
+				i.col = BLUE;
 			DrawSphere(
 				i.pos,
 				i.shape.sphere.radius,
@@ -76,6 +82,10 @@ void draw_3d(void)
 			cout << "Invalid Shape" << endl;
 		}
 	}
+
+	/* shot trails */
+	for (auto& i : fired_shots)
+		DrawLine3D(i.start, i.end, BLUE);
 
 	EndMode3D();
 }
@@ -108,6 +118,7 @@ void init(void)
 				.type = ShapeTypeSphere,
 				.pos = {i, 1.0f, 1.0f},
 				.col = RED,
+				.hit = false,
 			}
 		);
 	}
@@ -129,12 +140,47 @@ void update_camera_wasd(void)
 	);
 }
 
+void update_targets(void)
+{
+	if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) { /* shot */
+		Ray ray = GetScreenToWorldRay({ (float)scr_width/2, (float)scr_height/2 }, camera);
+		Vector3 end;
+
+		/* check if ray hit a target */
+		bool hit = false;
+		for (auto& i : all_targets) {
+			if (i.type == ShapeTypeSphere) {
+				RayCollision c = GetRayCollisionSphere(ray, i.pos, i.shape.sphere.radius);
+				if (c.hit) {
+					hit = i.hit = true;
+					end = c.point;
+				}
+			}
+
+			/* TODO other shapes */
+		}
+
+		/* default: shoot ray 100u if it didnt
+		   intersect any targets */
+		if (!hit) {
+			end = {
+				ray.position.x + ray.direction.x * 100.0f,
+				ray.position.y + ray.direction.y * 100.0f,
+				ray.position.z + ray.direction.z * 100.0f
+			};
+		}
+
+		fired_shots.push_back({.start=ray.position, .end=end});
+	}
+}
+
 int main(void)
 {
 	init();
 	while (!WindowShouldClose()) {
 		/* updates */
 		update_camera_wasd();
+		update_targets();
 
 		/* drawing */
 		BeginDrawing();

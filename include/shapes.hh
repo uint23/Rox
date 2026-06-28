@@ -29,8 +29,14 @@ typedef struct {
 	ShapeType type;
 	Vector3   pos;
 	Color     col;
+
+	bool      hit;
 } Target;
 
+typedef struct {
+	Vector3 start;
+	Vector3 end;
+} Line;
 
 #endif /* SHAPES_H */
 
