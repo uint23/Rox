@@ -4,37 +4,11 @@
 
 #include <raylib.h>
 
+#include "shapes.h"
+
 #define GAME_NAME "Rox - Aim Trainer"
 
 using std::cout, std::endl;
-
-typedef enum {
-	ShapeTypeSphere,
-	ShapeTypeCapsule,
-	ShapeTypeCuboid,
-	ShapeTypeCube,
-} ShapeType;
-
-typedef struct {
-	float radius;
-} ShapeSphere;
-
-typedef struct { /* TODO */ } ShapeCapsule;
-typedef struct { /* TODO */ } ShapeCuboid;
-typedef struct { /* TODO */ } ShapeCube;
-
-typedef struct {
-	union {
-		ShapeSphere  sphere;
-		ShapeCapsule capsule;
-		ShapeCuboid  cuboid;
-		ShapeCube    cube;
-	} shape;
-
-	ShapeType type;
-	Vector3   pos;
-	Color     col;
-} Target;
 
 /* draw on screen ui */
 void draw_ui(void);
