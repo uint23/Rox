@@ -6,7 +6,8 @@ LDFLAGS = -L.
 LDLIBS_WIN = -lopengl32 -lgdi32 -lwinmm
 LDLIBS = -lraylib -lm $(LDLIBS_WIN)
 
-SRCS = source/main.cc
+SRCS = source/main.cc \
+       source/beatmap_parser.cc
 OUT = rhythm
 
 all:

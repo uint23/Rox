@@ -4,11 +4,12 @@
 
 #include <raylib.h>
 
+#include "beatmap_parser.hh"
 #include "shapes.hh"
 
 #define GAME_NAME "Rox - Aim Trainer"
 
-using std::cout, std::endl;
+using std::cout, std::endl, std::vector;
 
 /* draw on screen ui */
 void draw_ui(void);
@@ -34,9 +35,10 @@ void update_targets(void);
 /* change key configured options */
 void update_options(void);
 
-std::vector<Target> all_targets;
-std::vector<Line>   fired_shots;
+vector<Target> all_targets;
+vector<Line>   fired_shots;
 bool                show_rays;
+float fov = 60;
 int scr_width  = 640;
 int scr_height = 480;
 Vector2 scr_center = {
@@ -115,7 +117,7 @@ void init(void)
 		.position = (Vector3){ 0.0f, 2.0f, 4.0f },
 		.target = (Vector3){ 0.0f, 2.0f, 0.0f },
 		.up = (Vector3){ 0.0f, 1.0f, 0.0f },
-		.fovy = 60.0f,
+		.fovy = fov,
 		.projection = CAMERA_PERSPECTIVE,
 	};
 
@@ -200,6 +202,19 @@ void update_options(void)
 
 int main(void)
 {
+	/* test parser */
+	OsuBeatmap test_bmp;
+	load_osu_beatmap(&test_bmp, "test.osu");
+	cout << test_bmp.audio_fp << endl;
+	cout << "time\ttype\tx\ty" << endl;
+	for (auto& i : test_bmp.objects) {
+		cout << i.time_ms << "\t";
+		cout << i.type << "\t";
+		cout << i.x << "\t";
+		cout << i.y << "\t" << std::endl;
+	}
+	return EXIT_SUCCESS;
+
 	init();
 	while (!WindowShouldClose()) {
 		/* updates */
