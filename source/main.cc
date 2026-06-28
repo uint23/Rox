@@ -31,8 +31,12 @@ void update_camera_wasd(void);
 /* update targets on screen */
 void update_targets(void);
 
+/* change key configured options */
+void update_options(void);
+
 std::vector<Target> all_targets;
 std::vector<Line>   fired_shots;
+bool                show_rays;
 int scr_width  = 640;
 int scr_height = 480;
 Vector2 scr_center = {
@@ -60,6 +64,9 @@ void draw_3d(void)
 
 	/* targets */
 	for (auto& i : all_targets) {
+		if (!i.visible)
+			continue;
+
 		if (i.type == ShapeTypeSphere) {
 			if (i.hit)
 				i.col = BLUE;
@@ -84,8 +91,10 @@ void draw_3d(void)
 	}
 
 	/* shot trails */
-	for (auto& i : fired_shots)
-		DrawLine3D(i.start, i.end, BLUE);
+	if (show_rays) {
+		for (auto& i : fired_shots)
+			DrawLine3D(i.start, i.end, BLUE);
+	}
 
 	EndMode3D();
 }
@@ -118,10 +127,13 @@ void init(void)
 				.type = ShapeTypeSphere,
 				.pos = {i, 1.0f, 1.0f},
 				.col = RED,
+				.visible = true,
 				.hit = false,
 			}
 		);
 	}
+
+	show_rays = false;
 }
 
 void update_camera_wasd(void)
@@ -177,6 +189,12 @@ void update_targets(void)
 	}
 }
 
+void update_options(void)
+{
+	if (IsKeyPressed(KEY_R))
+		show_rays = !show_rays;
+}
+
 int main(void)
 {
 	init();
@@ -184,6 +202,7 @@ int main(void)
 		/* updates */
 		update_camera_wasd();
 		update_targets();
+		update_options();
 
 		/* drawing */
 		BeginDrawing();

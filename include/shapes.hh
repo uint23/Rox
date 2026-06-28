@@ -30,6 +30,7 @@ typedef struct {
 	Vector3   pos;
 	Color     col;
 
+	bool      visible;
 	bool      hit;
 } Target;
 
