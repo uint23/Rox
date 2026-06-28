@@ -120,12 +120,15 @@ void init(void)
 	};
 
 	/* test target */
-	for (float i = 1.0f; i < 4.0f; i+=0.5f) {
+	for (float i = 1.0f; i < 4.0f; i += 0.5f) {
+		float rx = (float)GetRandomValue(-5, 5);
+		float ry = (float)GetRandomValue(1, 4);
+		float rz = (float)GetRandomValue(-2, 2);
 		all_targets.push_back(
 			(Target) {
 				.shape = { .sphere {.radius = 0.25f}, },
 				.type = ShapeTypeSphere,
-				.pos = {i, 1.0f, 1.0f},
+				.pos = {rx, ry, rz},
 				.col = RED,
 				.visible = true,
 				.hit = false,
