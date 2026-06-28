@@ -1,5 +1,6 @@
 #include <cstdlib>
 #include <iostream>
+#include <string>
 #include <vector>
 
 #include <raylib.h>
@@ -47,11 +48,14 @@ Vector2 scr_center = {
 };
 
 Camera3D camera;
-Ray gun_ray;
+Ray      gun_ray;
+Font     dbgfont;
 
 void draw_ui(void)
 {
 	draw_crosshair();
+	std::string fps_text = "FPS: " + std::to_string(GetFPS());
+	DrawTextEx(dbgfont, fps_text.c_str(), {10.0f, 10.0f}, 20.0f, 1.0f, RED);
 }
 
 void draw_3d(void)
@@ -110,8 +114,11 @@ void draw_crosshair(void)
 void init(void)
 {
 	InitWindow(scr_width, scr_height, GAME_NAME);
-	SetTargetFPS(144);
+	// SetTargetFPS(144);
 	DisableCursor();
+
+	dbgfont = LoadFont("assets/fonts/SplineSansMono-Regular.ttf");
+	dbgfont = LoadFontEx("assets/fonts/SplineSansMono-Regular.ttf", 20, NULL, 0);
 
 	camera = {
 		.position = (Vector3){ 0.0f, 2.0f, 4.0f },
@@ -143,13 +150,14 @@ void init(void)
 
 void update_camera_wasd(void)
 {
+	float step = GetFrameTime() * 10.0f;
 	UpdateCameraPro(
 		&camera,
 		(Vector3) {
-			(IsKeyDown(KEY_W) || IsKeyDown(KEY_UP))*0.1f -
-			(IsKeyDown(KEY_S) || IsKeyDown(KEY_DOWN))*0.1f,
-			(IsKeyDown(KEY_D) || IsKeyDown(KEY_RIGHT))*0.1f -
-			(IsKeyDown(KEY_A) || IsKeyDown(KEY_LEFT))*0.1f,
+			(IsKeyDown(KEY_W) || IsKeyDown(KEY_UP))*step -
+			(IsKeyDown(KEY_S) || IsKeyDown(KEY_DOWN))*step,
+			(IsKeyDown(KEY_D) || IsKeyDown(KEY_RIGHT))*step -
+			(IsKeyDown(KEY_A) || IsKeyDown(KEY_LEFT))*step,
 			0.0f
 		},
 		(Vector3){GetMouseDelta().x*0.05f, GetMouseDelta().y*0.05f, 0.0f},
@@ -200,20 +208,33 @@ void update_options(void)
 		show_rays = !show_rays;
 }
 
-int main(void)
+int main(int argc, char* argv[])
 {
-	/* test parser */
-	OsuBeatmap test_bmp;
-	load_osu_beatmap(&test_bmp, "test.osu");
-	cout << test_bmp.audio_fp << endl;
-	cout << "time\ttype\tx\ty" << endl;
-	for (auto& i : test_bmp.objects) {
-		cout << i.time_ms << "\t";
-		cout << i.type << "\t";
-		cout << i.x << "\t";
-		cout << i.y << "\t" << std::endl;
+	if (argc > 1) {
+		std::string av1 = std::string(argv[1]);
+
+		if (av1 == "--test-parser") {
+			OsuBeatmap test_bmp;
+			load_osu_beatmap(&test_bmp, "test.osu");
+			cout << test_bmp.audio_fp << endl;
+			cout << "time\ttype\tx\ty" << endl;
+			for (auto& i : test_bmp.objects) {
+				cout << i.time_ms << "\t";
+				cout << i.type << "\t";
+				cout << i.x << "\t";
+				cout << i.y << "\t" << std::endl;
+			}
+			return EXIT_SUCCESS;
+
+		}
+
+		else {
+			std::cout << "Usage:" << std::endl;
+			std::cout << "\t[--test-parser] outputs parser logs\n"
+			<< std::endl;
+			return EXIT_FAILURE;
+		}
 	}
-	return EXIT_SUCCESS;
 
 	init();
 	while (!WindowShouldClose()) {
@@ -231,6 +252,7 @@ int main(void)
 
 		EndDrawing();
 	}
+	UnloadFont(dbgfont);
 	CloseWindow();
 	return EXIT_SUCCESS;
 }
