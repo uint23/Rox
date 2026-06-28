@@ -10,8 +10,6 @@
 
 namespace fs = std::filesystem;
 
-static void find_local_maps(void);
-static bool extract_osz(const std::string& fp);
 static fs::path get_data_dir(void);
 static void parse_hitobjects(OsuBeatmap* bmp, const std::string& line);
 static void parse_general(OsuBeatmap* bmp, const std::string& line);
@@ -29,73 +27,6 @@ struct { /* section dispatch table */
 	{"[Colours]", 		NULL},
 	{"[HitObjects]", 	parse_hitobjects},
 };
-
-static bool extract_osz(const std::string& fp)
-{
-	std::ifstream file(fp, std::ios::binary);
-	if (!file.is_open()) {
-		std::cerr << "failed to read " << fp << std::endl;
-		return false;
-	}
-
-	fs::path targetdir = get_data_dir() / "maps";
-	std::error_code ec;
-	if (!fs::exists(fp, ec)) {
-		std::cerr << "file does not exist: " << fp << std::endl;
-		return false;
-	}
-
-	cppunzip::IStreamFile zipfile(file);
-	cppunzip::UnZipper unzipper(zipfile);
-	for (auto& entry : unzipper.listFiles()) {
-		if (entry.isDir())
-			continue;
-
-		fs::path outfp = targetdir / entry.fileName();
-		if (outfp.has_parent_path()) {
-			fs::create_directories(outfp.parent_path(), ec);
-			if (ec) {
-				std::cerr << "failed to create directory " << outfp.parent_path().string() 
-				          << ": " << ec.message() << std::endl;
-				return false;
-			}
-		}
-
-		/* decompress entry buffer from archive */
-		std::vector<uint8_t> dcdata = entry.readContent();
-		std::ofstream outstream(outfp, std::ios::binary);
-		if (outstream.is_open()) {
-			outstream.write((const char*)(dcdata.data()), dcdata.size());
-
-			if (!outstream) {
-				std::cerr << "write error while dumping: " << outfp.string() << std::endl;
-				outstream.close();
-				return false;
-			}
-			outstream.close();
-		}
-		else {
-			std::cerr << "failed to open/write: " << outfp.string() << std::endl;
-			return false;
-		}
-	}
-
-	return true;
-}
-
-static void find_local_maps(void)
-{
-	fs::path map_dir = get_data_dir() / "maps";
-
-	for (const auto& entry : fs::directory_iterator(map_dir)) {
-		if (entry.is_directory()) {
-			for (const auto& sub : fs::directory_iterator(entry.path())) {
-				if (sub.path().extension() == ".osu")
-					std::cout << "found map: " << sub.path().filename() << std::endl;
-			}
-		}
-	}
-}
 
 static fs::path get_data_dir(void)
 {
@@ -177,6 +108,77 @@ static void parse_general(OsuBeatmap* bmp, const std::string& line)
 				bmp->audio_fp = val;
 		}
 	}
+}
+
+bool extract_install_osz(const std::string& fp)
+{
+	std::ifstream file(fp, std::ios::binary);
+	if (!file.is_open()) {
+		std::cerr << "failed to read " << fp << std::endl;
+		return false;
+	}
+
+	fs::path targetdir = get_data_dir() / "maps";
+	std::error_code ec;
+	if (!fs::exists(fp, ec)) {
+		std::cerr << "file does not exist: " << fp << std::endl;
+		return false;
+	}
+
+	cppunzip::IStreamFile zipfile(file);
+	cppunzip::UnZipper unzipper(zipfile);
+	for (auto& entry : unzipper.listFiles()) {
+		if (entry.isDir())
+			continue;
+
+		fs::path outfp = targetdir / entry.fileName();
+		if (outfp.has_parent_path()) {
+			fs::create_directories(outfp.parent_path(), ec);
+			if (ec) {
+				std::cerr << "failed to create directory " << outfp.parent_path().string() 
+				          << ": " << ec.message() << std::endl;
+				return false;
+			}
+		}
+
+		/* decompress entry buffer from archive */
+		std::vector<uint8_t> dcdata = entry.readContent();
+		std::ofstream outstream(outfp, std::ios::binary);
+		if (outstream.is_open()) {
+			outstream.write((const char*)(dcdata.data()), dcdata.size());
+
+			if (!outstream) {
+				std::cerr << "write error while dumping: " << outfp.string() << std::endl;
+				outstream.close();
+				return false;
+			}
+			outstream.close();
+		}
+		else {
+			std::cerr << "failed to open/write: " << outfp.string() << std::endl;
+			return false;
+		}
+	}
+
+	return true;
+}
+
+std::vector<std::string> find_local_beatmaps(void)
+{
+	fs::path map_dir = get_data_dir() / "maps";
+	std::vector<std::string> paths;
+
+	for (const auto& entry : fs::directory_iterator(map_dir)) {
+		if (!entry.is_directory())
+			continue;
+		for (const auto& sub : fs::directory_iterator(entry.path())) {
+			if (!(sub.path().extension() == ".osu"))
+				continue;
+			std::cout << "found map: " << sub.path().filename() << std::endl;
+			paths.push_back(sub.path().string());
+		}
+	}
+	return paths;
 }
 
 void load_osu_beatmap(OsuBeatmap* bmp, const std::string& path)

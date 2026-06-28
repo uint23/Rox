@@ -20,6 +20,8 @@ typedef struct {
 	std::vector<OsuHitObject> objects;
 } OsuBeatmap;
 
+bool extract_install_osz(const std::string& fp);
+std::vector<std::string> find_local_beatmaps(void);
 void load_osu_beatmap(OsuBeatmap* bmp, const std::string& path);
 
 #endif /* BEATMAP_PARSER_H */
