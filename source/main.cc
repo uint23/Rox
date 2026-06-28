@@ -107,8 +107,12 @@ void draw_3d(void)
 
 void draw_crosshair(void)
 {
-	int radius = 4;
-	DrawCircle(scr_center.x-radius, scr_center.y-radius, 4, WHITE);
+    int len = 5;
+    int cx = scr_center.x;
+    int cy = scr_center.y;
+
+    DrawLine(cx, cy-len, cx, cy+len, BLACK); /* vertical */
+    DrawLine(cx-len, cy, cx+len, cy, BLACK); /* horizontal */
 }
 
 void init(void)
